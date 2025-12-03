@@ -35,15 +35,17 @@ phishing_xai_project/
 ## Setup
 1) Create and activate a virtual environment (Python 3.10+):
 ```bash
-python -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
+python3 -m venv venv
+source venv/bin/activate   # Windows: venv\Scripts\activate
 ```
 2) Install dependencies:
 ```bash
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
-3) Place the dataset CSV at `data/phishing_emails.csv` with columns `text` and `label` (0 = ham/safe, 1 = phishing).
+3) Place the dataset CSV at `data/phishing_dataset_1900.csv` with columns `email_text` (or `text`) and `label` (0 = ham/safe, 1 = phishing).
+
+> **Note**: Model files are not included in the repository due to size constraints. You must train the models first by running `python main_train_all.py`.
 
 ## Training Pipeline
 Run the full pipeline (preprocess → classic models → BERT → evaluation):
