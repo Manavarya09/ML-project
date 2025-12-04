@@ -3,9 +3,8 @@
 from typing import Iterable, List, Tuple
 
 import numpy as np
-import shap
+import numpy as np
 import torch
-from lime.lime_text import LimeTextExplainer
 
 from src import preprocessing
 from src.bert_model import load_finetuned_model
@@ -57,6 +56,7 @@ def explain_single_email_shap_classic(
         "suspicious_keyword",
     ]
 
+    import shap
     explainer = shap.Explainer(model, combined, feature_names=feature_names)
     shap_values = explainer(combined)
     values = np.array(shap_values.values)[0]
@@ -69,6 +69,7 @@ def explain_single_email_lime_classic(
 ) -> List[Tuple[str, float]]:
     """Generate a LIME explanation for a single email."""
     predict_fn = _wrap_predict_proba(model, vectorizer, scaler)
+    from lime.lime_text import LimeTextExplainer
     explainer = LimeTextExplainer(class_names=["ham", "phishing"])
     explanation = explainer.explain_instance(text, predict_fn, num_features=top_k)
     return explanation.as_list()

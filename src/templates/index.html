@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phishing Detector</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Phishing Detector</h1>
+            <p class="subtitle">AI-Powered Analysis</p>
+        </header>
+
+        <main>
+            <div class="card input-card">
+                <form id="analyzeForm">
+                    <div class="form-group">
+                        <textarea 
+                            name="email_text" 
+                            id="emailText" 
+                            placeholder="Paste email content here..." 
+                            required
+                        ></textarea>
+                    </div>
+                    <button type="submit" id="analyzeBtn">Analyze Content</button>
+                </form>
+            </div>
+
+            <div id="resultContainer" class="result-container hidden">
+                <!-- Result card will be injected here -->
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.getElementById('analyzeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const text = document.getElementById('emailText').value;
+            const btn = document.getElementById('analyzeBtn');
+            const container = document.getElementById('resultContainer');
+            
+            // Loading state
+            btn.textContent = "Analyzing...";
+            btn.disabled = true;
+            container.classList.add('hidden');
+            container.innerHTML = '';
+
+            try {
+                const formData = new FormData();
+                formData.append('email_text', text);
+
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                // Construct Result Card
+                const isPhishing = data.is_phishing;
+                const label = isPhishing ? "PHISHING DETECTED" : "LEGITIMATE EMAIL";
+                const prob = (data.probability * 100).toFixed(1);
+                
+                let termsHtml = '';
+                if (data.explanation && data.explanation.length > 0) {
+                    termsHtml = '<div class="explanation"><h3>Key Indicators</h3><ul>';
+                    data.explanation.forEach(([term, score]) => {
+                        const impact = score > 0 ? '+' : '';
+                        termsHtml += `<li><span class="term">"${term}"</span> <span class="score">${impact}${score.toFixed(3)}</span></li>`;
+                    });
+                    termsHtml += '</ul></div>';
+                }
+
+                const resultHtml = `
+                    <div class="card result-card ${isPhishing ? 'danger' : 'safe'}">
+                        <div class="result-header">
+                            <h2>${label}</h2>
+                            <div class="confidence">Confidence: ${prob}%</div>
+                        </div>
+                        ${termsHtml}
+                    </div>
+                `;
+
+                container.innerHTML = resultHtml;
+                container.classList.remove('hidden');
+
+            } catch (err) {
+                console.error(err);
+                alert("An error occurred during analysis.");
+            } finally {
+                btn.textContent = "Analyze Content";
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
