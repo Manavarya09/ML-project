@@ -185,3 +185,56 @@ button:disabled {
     text-decoration: underline;
     text-decoration-thickness: 2px;
 }
+
+/* Highlighting */
+.highlight {
+    border-radius: 2px;
+    padding: 0 2px;
+    transition: background-color 0.3s;
+    cursor: help;
+}
+
+.text-content {
+    white-space: pre-wrap;
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.8;
+    color: var(--black);
+}
+
+.analysis-view h3 {
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 1rem;
+    opacity: 0.6;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.5rem;
+}
+
+/* Desktop Split View */
+@media (min-width: 1024px) {
+    .container {
+        max-width: 1200px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4rem;
+        align-items: start;
+    }
+
+    header {
+        grid-column: 1 / -1;
+        margin-bottom: 3rem;
+    }
+
+    .input-card {
+        position: sticky;
+        top: 2rem;
+        height: auto;
+    }
+
+    .result-card {
+        margin-top: 0;
+    }
+}

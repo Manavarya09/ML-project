@@ -39,9 +39,9 @@ class Config:
     rf_max_depth: int | None = None
 
     # BERT
-    pretrained_model_name: str = "distilbert-base-uncased"
+    pretrained_model_name: str = "bert-base-uncased"
     bert_max_length: int = 256
-    bert_batch_size: int = 16
+    bert_batch_size: int = 8
     bert_learning_rate: float = 2e-5
     bert_epochs: int = 3
     bert_weight_decay: float = 0.01

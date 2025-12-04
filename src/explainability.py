@@ -1,6 +1,6 @@
 """Explainability utilities using SHAP and LIME."""
 
-from typing import Iterable, List, Tuple
+from typing import Iterable, List, Tuple, Dict, Any
 
 import numpy as np
 import numpy as np
@@ -75,54 +75,76 @@ def explain_single_email_lime_classic(
     return explanation.as_list()
 
 
-def explain_bert_tokens(text: str, top_k: int = 10) -> List[Tuple[str, float]]:
+def explain_bert_tokens(text: str, top_k: int = 20) -> List[Dict[str, Any]]:
     """
-    Lightweight token-level importance for the fine-tuned BERT model.
-
-    Uses an occlusion-based approach: remove one token at a time and
-    observe probability drop for the phishing class.
+    Compute token importance for highlighting.
+    Returns list of dicts: {'word': str, 'score': float, 'start': int, 'end': int}
     """
     model, tokenizer, device = load_finetuned_model()
     model.eval()
 
-    # Tokenize and get baseline probability
+    # Tokenize with offsets
     inputs = tokenizer(
-        [text],
+        text,
+        return_offsets_mapping=True,
         truncation=True,
         padding="max_length",
         max_length=config.bert_max_length,
         return_tensors="pt",
     )
-    inputs = {k: v.to(device) for k, v in inputs.items()}
+    
+    input_ids = inputs["input_ids"][0]
+    offsets = inputs["offset_mapping"][0]
+    attention_mask = inputs["attention_mask"][0]
+    
+    # Baseline probability
+    model_inputs = {k: v.to(device) for k, v in inputs.items() if k != "offset_mapping"}
     with torch.no_grad():
-        base_probs = torch.softmax(model(**inputs).logits, dim=1).cpu().numpy()[0]
+        base_probs = torch.softmax(model(**model_inputs).logits, dim=1).cpu().numpy()[0]
     base_phish_prob = float(base_probs[1])
 
-    encoded = tokenizer.encode_plus(
-        text,
-        truncation=True,
-        max_length=config.bert_max_length,
-        add_special_tokens=True,
-    )
-    tokens = tokenizer.convert_ids_to_tokens(encoded["input_ids"])
-    filtered_tokens = [t for t in tokens if t not in tokenizer.all_special_tokens]
+    # Get special token IDs to skip
+    special_ids = set(tokenizer.all_special_ids)
+    mask_id = tokenizer.mask_token_id
 
-    importance = []
-    for idx, tok in enumerate(filtered_tokens):
-        occluded_tokens = filtered_tokens[:idx] + filtered_tokens[idx + 1 :]
-        occluded_text = tokenizer.convert_tokens_to_string(occluded_tokens)
-        occluded_inputs = tokenizer(
-            [occluded_text],
-            truncation=True,
-            padding="max_length",
-            max_length=config.bert_max_length,
-            return_tensors="pt",
-        )
-        occluded_inputs = {k: v.to(device) for k, v in occluded_inputs.items()}
+    results = []
+    
+    # Iterate over tokens (skip padding and special tokens)
+    # We only check the first N tokens to save time if text is long, or all non-pad tokens
+    seq_len = int(attention_mask.sum())
+    
+    for i in range(seq_len):
+        tok_id = int(input_ids[i])
+        if tok_id in special_ids:
+            continue
+            
+        # Occlusion via Masking (better for BERT than removal)
+        masked_ids = input_ids.clone()
+        masked_ids[i] = mask_id
+        
+        masked_inputs = {
+            "input_ids": masked_ids.unsqueeze(0).to(device),
+            "attention_mask": attention_mask.unsqueeze(0).to(device)
+        }
+        
         with torch.no_grad():
-            probs = torch.softmax(model(**occluded_inputs).logits, dim=1).cpu().numpy()[0]
+            probs = torch.softmax(model(**masked_inputs).logits, dim=1).cpu().numpy()[0]
+        
         drop = base_phish_prob - float(probs[1])
-        importance.append((tok, drop))
+        
+        # Only keep positive contributions (evidence FOR phishing)
+        if drop > 0.001:
+            start, end = offsets[i].numpy()
+            # Handle subwords: if start==end (some special cases) skip
+            if start == end: continue
+            
+            results.append({
+                "word": text[start:end],
+                "score": float(drop),
+                "start": int(start),
+                "end": int(end)
+            })
 
-    importance_sorted = sorted(importance, key=lambda x: abs(x[1]), reverse=True)[:top_k]
-    return importance_sorted
+    # Sort by importance
+    results = sorted(results, key=lambda x: x["score"], reverse=True)[:top_k]
+    return results

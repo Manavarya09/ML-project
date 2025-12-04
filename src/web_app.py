@@ -42,7 +42,7 @@ async def read_root(request: Request):
 async def analyze_email(email_text: str = Form(...)) -> Dict[str, Any]:
     """
     Analyze email text using the BERT model.
-    Returns JSON with prediction and explanation.
+    Returns JSON with prediction and explanation (list of dicts with offsets).
     """
     label, proba, explanation = predict_email_bert(email_text)
     

@@ -65,7 +65,7 @@ def predict_email_bert(text: str):
     Predict phishing probability using the fine-tuned BERT model and return explanation.
 
     Returns:
-        label (int), probability (float), explanation (list)
+        label (int), probability (float), explanation (List[Dict])
     """
     model, tokenizer, device = load_finetuned_model()
     encodings = tokenizer(
